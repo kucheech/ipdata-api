@@ -1,6 +1,10 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 
@@ -8,14 +12,27 @@ import (
 )
 
 type ipdata struct {
-	CountryCode string `json:"countrycode"`
+	CountryCode string `json:"countryCode"`
 	Timezone    string `json:"timezone"`
 }
 
-var data = []ipdata{
-	{CountryCode: "SG", Timezone: "Asia/Singapore"},
-	{CountryCode: "CA", Timezone: "America/Toronto"},
-	{CountryCode: "US", Timezone: "America/New_York"},
+func fetchDataFromIpApi(ip string) ipdata {
+	url := fmt.Sprintf("http://ip-api.com/json/%s?fields=countryCode,timezone", ip)
+	response, err := http.Get(url)
+
+	if err != nil {
+		fmt.Print(err.Error())
+		return ipdata{}
+	}
+
+	responseData, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var responseObject ipdata
+	json.Unmarshal(responseData, &responseObject)
+	return responseObject
 }
 
 func isValidIp(ip string) bool {
@@ -25,7 +42,8 @@ func isValidIp(ip string) bool {
 func getDataByIp(c *gin.Context) {
 	ip := c.Query("ip")
 	if isValidIp(ip) {
-		c.IndentedJSON(http.StatusOK, data[2])
+		result := fetchDataFromIpApi(ip)
+		c.IndentedJSON(http.StatusOK, result)
 	} else {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "invalid ip or data not found"})
 	}
@@ -33,7 +51,6 @@ func getDataByIp(c *gin.Context) {
 
 func main() {
 	router := gin.Default()
-	// router.GET("/data", getData)
 	router.GET("/data", getDataByIp)
 
 	router.Run("localhost:8080")
