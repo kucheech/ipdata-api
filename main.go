@@ -2,11 +2,14 @@ package main
 
 import (
 	"net/http"
+	"time"
+	"os"
+	"log"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/patrickmn/go-cache"
-	"time"
+
 )
 
 func getDataByIp(c *gin.Context) {
@@ -20,6 +23,12 @@ func getDataByIp(c *gin.Context) {
 }
 
 func main() {
+	port := os.Getenv("PORT")
+
+	if port == "" {
+		log.Fatal("$PORT must be set")
+	}
+
 	cache := cache.New(5*time.Minute, 10*time.Minute)
 
 	router := gin.Default()
@@ -30,5 +39,6 @@ func main() {
 
 	router.GET("/data", CacheCheck(cache), getDataByIp)
 
-	router.Run("localhost:8080")
+	// router.Run("localhost:8080")
+	router.Run(":" + port)
 }
